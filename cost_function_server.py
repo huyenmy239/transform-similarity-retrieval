@@ -92,25 +92,25 @@ if __name__ == "__main__":
     server.CostInsert({"name": "brightness_cost", "type": "brightness", "formula": "(factor - 1)**2"})
 
     # Load ảnh
-    img = cv2.imread(r"images/test.jpg")
+    img = cv2.imread(r"data/test.jpg")
     if img is None:
         raise ValueError("Không load được ảnh")
 
     # Thay đổi phép biến đổi để test:
-    # operator = {
-    #     "type": "scale",
-    #     "params": {
-    #         "sx": 2.0,
-    #         "sy": 1.5
-    #     }
-    # }
     operator = {
-    "type": "translate",
-    "params": {
-        "dx": 100,
-        "dy": 50
+        "type": "scale",
+        "params": {
+            "sx": 2.0,
+            "sy": 1.5
+        }
     }
-}
+#     operator = {
+#     "type": "translate",
+#     "params": {
+#         "dx": 100,
+#         "dy": 50
+#     }
+# }
 #     operator = {
 #     "type": "rotate",
 #     "params": {
