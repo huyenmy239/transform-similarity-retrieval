@@ -18,5 +18,10 @@
         "name": "paint_cost",
         "type": "paint",
         "formula": "(diff(color1, color2)) ** 3 + (val1 - val2) ** 2"
+    },
+    {
+        "name": "nonuniform_scaling_cost",
+        "type": "nonuniform_scaling",
+        "formula": "(sx - sqrt(sx * sy))**2 + (sy - sqrt(sx * sy))**2"
     }
 ]
