@@ -1,27 +1,27 @@
 [
     {
-        "name": "rotate_cost",
-        "type": "rotate",
-        "formula": "(angle / 180) ** 2"
+        "name": "translate_cost",
+        "type": "translate",
+        "formula": "abs(dx) + abs(dy)"
     },
     {
         "name": "scale_cost",
         "type": "scale",
-        "formula": "(sx - 1)**2 + (sy - 1)**2"
+        "formula": "abs(scale - 1.0) * 10"
     },
     {
-        "name": "translate_cost",
-        "type": "translate",
-        "formula": "(dx**2 + dy**2)**0.5"
+        "name": "nonuniform_scale_cost",
+        "type": "nonuniform_scale",
+        "formula": "(abs(scale_x - 1.0) + abs(scale_y - 1.0)) * 10"
     },
     {
         "name": "paint_cost",
         "type": "paint",
-        "formula": "(diff(color1, color2)) ** 3 + (val1 - val2) ** 2"
+        "formula": "5"
     },
     {
-        "name": "nonuniform_scaling_cost",
-        "type": "nonuniform_scaling",
-        "formula": "(sx - sqrt(sx * sy))**2 + (sy - sqrt(sx * sy))**2"
+        "name": "move_cost",
+        "type": "move",
+        "formula": "abs(distance)"
     }
 ]

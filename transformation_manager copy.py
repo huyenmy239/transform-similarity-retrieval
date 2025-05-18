@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from typing import Callable, Dict, Any, List, Optional, Tuple, get_origin, get_args
 import copy
 from queue import PriorityQueue
+from cost_function_server import CostFunctionServer
+
+import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw
 
 
 @dataclass
@@ -101,24 +105,75 @@ def create_default_object_operators() -> List[TransformationOperator]:
 
 
 class ObjectConvertor:
-    def __init__(self, tlm: TransformationLibraryManager, cost_function):
-        self.tlm = tlm
-        self.cost_function = cost_function
 
+    def __init__(
+        self, tlm: TransformationLibraryManager, cost_server: CostFunctionServer
+    ):
+        self.tlm = tlm
+        self.cost_server = cost_server
+
+    # def convert(
+    #     self, o1: ImageObjectRegion, o2: ImageObjectRegion
+    # ) -> Optional[List[InstantiatedOperator]]:
+    #     visited = set()
+    #     pq = PriorityQueue()
+    #     counter = 0
+    #     pq.put((0, counter, [], o1))
+    #     counter += 1
+
+    #     while not pq.empty():
+    #         cost_so_far, _, path, current = pq.get()
+
+    #         if self.objects_equal(current, o2):
+    #             return path, cost_so_far  # Trả về cả path và cost
+
+    #         current_hash = self.hash_object(current)
+    #         if current_hash in visited:
+    #             continue
+    #         visited.add(current_hash)
+
+    #         for operator in self.tlm.operators.values():
+    #             for params in self.generate_params(operator):
+    #                 try:
+    #                     instantiated = self.tlm.TLMsearch(operator.name, params)
+    #                     new_obj = copy.deepcopy(current)
+    #                     new_obj = instantiated.apply(new_obj)
+
+    #                     # Tính chi phí bằng CostFunctionServer
+    #                     operator_dict = {
+    #                         "type": instantiated.operator.name,
+    #                         "params": instantiated.params,
+    #                     }
+    #                     step_cost = self.cost_server.EvaluateCall(operator_dict)
+    #                     print(
+    #                         f"Cost from {current} to {new_obj}: {step_cost} (params: {params})")
+    #                     total_cost = cost_so_far + step_cost
+    #                     pq.put((total_cost, counter, path + [instantiated], new_obj))
+    #                     counter += 1
+    #                 except Exception:
+    #                     continue
+    #     return None, float("inf")
     def convert(
-        self, o1: ImageObjectRegion, o2: ImageObjectRegion
-    ) -> Optional[List[InstantiatedOperator]]:
+        self, o1: ImageObjectRegion, o2: ImageObjectRegion, visualize: bool = False
+    ) -> Optional[Tuple[List[InstantiatedOperator], float]]:
         visited = set()
         pq = PriorityQueue()
         counter = 0
         pq.put((0, counter, [], o1))
         counter += 1
 
+        if visualize:
+            print("Ảnh bắt đầu:")
+            self.display_object(o1, "Start")
+
         while not pq.empty():
             cost_so_far, _, path, current = pq.get()
 
             if self.objects_equal(current, o2):
-                return path
+                if visualize:
+                    print("Ảnh kết thúc:")
+                    self.display_object(current, "Target reached")
+                return path, cost_so_far
 
             current_hash = self.hash_object(current)
             if current_hash in visited:
@@ -131,12 +186,36 @@ class ObjectConvertor:
                         instantiated = self.tlm.TLMsearch(operator.name, params)
                         new_obj = copy.deepcopy(current)
                         new_obj = instantiated.apply(new_obj)
-                        total_cost = cost_so_far + self.cost_function(instantiated)
+
+                        operator_dict = {
+                            "type": instantiated.operator.name,
+                            "params": instantiated.params,
+                        }
+                        step_cost = self.cost_server.EvaluateCall(operator_dict)
+                        total_cost = cost_so_far + step_cost
+
+                        if visualize:
+                            print(f"{instantiated.operator.name} {instantiated.params}")
+                            self.display_object(
+                                new_obj, f"{instantiated.operator.name}"
+                            )
+
                         pq.put((total_cost, counter, path + [instantiated], new_obj))
                         counter += 1
                     except Exception:
                         continue
-        return None
+        return None, float("inf")
+
+    def display_object(self, obj: ImageObjectRegion, title: str = ""):
+        img = Image.new("RGB", (100, 100), (255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        color = obj.color if obj.color else (0, 0, 0)
+        draw.rectangle([obj.x1, obj.y1, obj.x2, obj.y2], fill=color, outline=(0, 0, 0))
+
+        plt.imshow(img)
+        plt.title(title)
+        plt.axis("off")
+        plt.show()
 
     def hash_object(self, obj):
         return (obj.x1, obj.y1, obj.x2, obj.y2, obj.color)
@@ -191,14 +270,40 @@ for op in create_default_object_operators():
 
 o1 = ImageObjectRegion(10, 10, 20, 20, (0, 0, 255))
 o2 = ImageObjectRegion(10, 10, 20, 30, (255, 0, 0))
+CFS = CostFunctionServer()
+
+CFS.CostInsert(
+    {"name": "rotate_cost", "type": "rotate", "formula": "(angle / 180) ** 2"}
+)
+
+CFS.CostInsert(
+    {"name": "scale_cost", "type": "scale", "formula": "(sx - 1)**2 + (sy - 1)**2"}
+)
+
+CFS.CostInsert(
+    {
+        "name": "paint_cost",
+        "type": "paint",
+        "formula": "(diff(color1, color2)) ** 3 + (val1 - val2) ** 2",
+    }
+)
+CFS.CostInsert(
+    {
+        "name": "nonuniform_scaling_cost",
+        "type": "nonuniform_scaling",
+        "formula": "(sx - sqrt(sx * sy))**2 + (sy - sqrt(sx * sy))**2",
+    }
+)
 
 
-converter = ObjectConvertor(tlm, simple_cost_function)
-result = converter.convert(o1, o2)
+converter = ObjectConvertor(tlm, CFS)
+result, cost = converter.convert(o1, o2)
 
 # In ra các bước biến đổi
 if result:
     for step in result:
         print(f"{step.operator.name} {step.params}")
+    print(f"Chi phi: {cost}")
+
 else:
-    print("Không tìm được chuỗi biến đổi phù hợp.")
+    print("Khong tim duoc chuoi bien doi phu hop.")
