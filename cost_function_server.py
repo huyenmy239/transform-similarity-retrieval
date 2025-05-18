@@ -3,6 +3,7 @@ import os
 import math
 import re
 
+
 class CostFunctionServer:
     def __init__(self, path="data/cost_function.json"):
         self.path = path
@@ -15,13 +16,17 @@ class CostFunctionServer:
         """Thêm hàm chi phí mới vào thư viện, nếu chưa có"""
         with open(self.path, "r") as f:
             data = json.load(f)
-        
+
         for existing_func in data:
             if existing_func["name"].lower() == cost_func["name"].lower():
-                raise Exception(f"Hàm chi phí với tên '{cost_func['name']}' đã tồn tại.")
+                raise Exception(
+                    f"Hàm chi phí với tên '{cost_func['name']}' đã tồn tại."
+                )
             if existing_func["type"].lower() == cost_func["type"].lower():
-                raise Exception(f"Hàm chi phí với kiểu '{cost_func['type']}' đã tồn tại.")
-        
+                raise Exception(
+                    f"Hàm chi phí với kiểu '{cost_func['type']}' đã tồn tại."
+                )
+
         data.append(cost_func)
         with open(self.path, "w") as f:
             json.dump(data, f, indent=4)
@@ -32,11 +37,32 @@ class CostFunctionServer:
 
     def cbrt(self, x):
         """Hàm tính căn bậc ba."""
-        return x ** (1/3)
+        return x ** (1 / 3)
 
     def fourthrt(self, x):
         """Hàm tính căn bậc bốn."""
-        return x ** (1/4)
+        return x ** (1 / 4)
+
+    def rgb_to_val(self, color):
+        # Nếu color là chuỗi (ví dụ "(2,0,1)"), chuyển thành tuple
+        if isinstance(color, str):
+            try:
+                # Dùng eval nếu input an toàn, hoặc parse tay
+                color = eval(color)  # Cẩn thận: eval chỉ dùng nếu input đáng tin cậy
+                # Hoặc an toàn hơn (nếu sợ lỗi cú pháp):
+                # import re
+                # color = tuple(map(float, re.findall(r"[-+]?\d*\.\d+|\d+", color)))
+            except Exception:
+                raise ValueError(f"Không thể chuyển '{color}' thành bộ 3 số RGB")
+
+        # Kiểm tra đúng định dạng RGB
+        if not isinstance(color, (tuple, list)) or len(color) != 3:
+            raise ValueError(
+                f"Giá trị màu không hợp lệ: {color}, phải là 3 phần tử (r, g, b)"
+            )
+
+        r, g, b = color
+        return 0.299 * r + 0.587 * g + 0.114 * b
 
     def EvaluateCall(self, operator: dict):
         """Tính chi phí của một phép biến đổi"""
@@ -52,10 +78,13 @@ class CostFunctionServer:
                     local_env["cbrt"] = self.cbrt
                     local_env["fourthrt"] = self.fourthrt
                     local_env["sum"] = sum  # Hỗ trợ hàm sum cho toán tử ∑
+                    local_env["rgb_to_val"] = self.rgb_to_val
 
                     # Kiểm tra các biến cần thiết
-                    all_vars = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', func["formula"])
-                    reserved = {"diff", "sqrt", "cbrt", "fourthrt", "sum"}
+                    all_vars = re.findall(
+                        r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", func["formula"]
+                    )
+                    reserved = {"diff", "sqrt", "cbrt", "fourthrt", "sum", "rgb_to_val"}
                     required_vars = set(v for v in all_vars if v not in reserved)
                     missing_vars = required_vars - set(operator["params"].keys())
                     if missing_vars:
@@ -64,7 +93,9 @@ class CostFunctionServer:
                     cost = eval(func["formula"], {}, local_env)
                     return cost
                 except NameError as e:
-                    raise RuntimeError(f"Lỗi: Biến hoặc hàm không xác định trong công thức: {e}")
+                    raise RuntimeError(
+                        f"Lỗi: Biến hoặc hàm không xác định trong công thức: {e}"
+                    )
                 except Exception as e:
                     raise RuntimeError(f"Lỗi khi tính toán công thức: {e}")
         raise ValueError(f"Không tìm thấy hàm chi phí cho kiểu {operator['type']}")
