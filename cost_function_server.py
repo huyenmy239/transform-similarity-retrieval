@@ -5,7 +5,6 @@ import numpy as np
 import math
 import re
 
-
 class CostFunctionServer:
     def __init__(self, path="data/cost_function.json"):
         self.path = path
@@ -78,7 +77,7 @@ class CostFunctionServer:
                 try:
                     local_env = dict(operator["params"])
                     local_env["diff"] = self.diff
-
+                    local_env["abs"] = abs
                     local_env["sqrt"] = math.sqrt
                     local_env["cbrt"] = self.cbrt
                     local_env["fourthrt"] = self.fourthrt
@@ -89,7 +88,7 @@ class CostFunctionServer:
                     all_vars = re.findall(
                         r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", func["formula"]
                     )
-                    reserved = {"diff", "sqrt", "cbrt", "fourthrt", "sum", "rgb_to_val"}
+                    reserved = {"diff", "sqrt", "cbrt", "fourthrt", "sum", "rgb_to_val", "abs"}
                     required_vars = set(v for v in all_vars if v not in reserved)
                     missing_vars = required_vars - set(operator["params"].keys())
                     if missing_vars:
