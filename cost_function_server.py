@@ -1,7 +1,10 @@
 import json
+import math
 import os
+import numpy as np
 import math
 import re
+
 
 
 class CostFunctionServer:
@@ -74,6 +77,7 @@ class CostFunctionServer:
                 try:
                     local_env = dict(operator["params"])
                     local_env["diff"] = self.diff
+
                     local_env["sqrt"] = math.sqrt
                     local_env["cbrt"] = self.cbrt
                     local_env["fourthrt"] = self.fourthrt

@@ -316,3 +316,4 @@ scrollbar.config(command=listbox.yview)
 refresh_cost_functions()
 
 root.mainloop()
+

@@ -1,0 +1,27 @@
+[
+    {
+        "name": "rotate_cost",
+        "type": "rotate",
+        "formula": "(angle / 180) ** 2"
+    },
+    {
+        "name": "scale_cost",
+        "type": "scale",
+        "formula": "(sx - 1)**2 + (sy - 1)**2"
+    },
+    {
+        "name": "translate_cost",
+        "type": "translate",
+        "formula": "(dx**2 + dy**2)**0.5"
+    },
+    {
+        "name": "paint_cost",
+        "type": "paint",
+        "formula": "(diff(color1, color2)) ** 3 + (val1 - val2) ** 2"
+    },
+    {
+        "name": "nonuniform_scaling_cost",
+        "type": "nonuniform_scaling",
+        "formula": "(sx - sqrt(sx * sy))**2 + (sy - sqrt(sx * sy))**2"
+    }
+]
