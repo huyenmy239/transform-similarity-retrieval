@@ -18,5 +18,10 @@
         "name": "paint_cost",
         "type": "paint",
         "formula": "(diff(color1, color2)) ** 3 + (val1 - val2) ** 2"
+    },
+    {
+        "name": "Test",
+        "type": "Test",
+        "formula": "a+sqrt(b)"
     }
 ]

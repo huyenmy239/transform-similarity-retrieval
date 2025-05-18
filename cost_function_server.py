@@ -1,5 +1,7 @@
 import json
 import os
+import math
+import re
 
 class CostFunctionServer:
     def __init__(self, path="data/cost_function.json"):
@@ -14,23 +16,28 @@ class CostFunctionServer:
         with open(self.path, "r") as f:
             data = json.load(f)
         
-        # Kiểm tra xem hàm chi phí với cùng 'name' hoặc 'type' đã tồn tại chưa
         for existing_func in data:
-            if existing_func["name"] == cost_func["name"] or existing_func["type"] == cost_func["type"]:
-                print(f"Hàm chi phí '{cost_func['name']}' hoặc kiểu '{cost_func['type']}' đã tồn tại, không thêm lại.")
-                return
+            if existing_func["name"].lower() == cost_func["name"].lower():
+                raise Exception(f"Hàm chi phí với tên '{cost_func['name']}' đã tồn tại.")
+            if existing_func["type"].lower() == cost_func["type"].lower():
+                raise Exception(f"Hàm chi phí với kiểu '{cost_func['type']}' đã tồn tại.")
         
-        # Nếu chưa tồn tại, thêm mới
         data.append(cost_func)
         with open(self.path, "w") as f:
             json.dump(data, f, indent=4)
-        print(f"Đã thêm hàm chi phí: {cost_func['name']}")
-
 
     def diff(self, color1: str, color2: str) -> int:
         """Hàm diff: 0 nếu màu giống, 3 nếu khác"""
         return 0 if color1 == color2 else 3
-    
+
+    def cbrt(self, x):
+        """Hàm tính căn bậc ba."""
+        return x ** (1/3)
+
+    def fourthrt(self, x):
+        """Hàm tính căn bậc bốn."""
+        return x ** (1/4)
+
     def EvaluateCall(self, operator: dict):
         """Tính chi phí của một phép biến đổi"""
         with open(self.path, "r") as f:
@@ -41,9 +48,23 @@ class CostFunctionServer:
                 try:
                     local_env = dict(operator["params"])
                     local_env["diff"] = self.diff
+                    local_env["sqrt"] = math.sqrt
+                    local_env["cbrt"] = self.cbrt
+                    local_env["fourthrt"] = self.fourthrt
+                    local_env["sum"] = sum  # Hỗ trợ hàm sum cho toán tử ∑
+
+                    # Kiểm tra các biến cần thiết
+                    all_vars = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', func["formula"])
+                    reserved = {"diff", "sqrt", "cbrt", "fourthrt", "sum"}
+                    required_vars = set(v for v in all_vars if v not in reserved)
+                    missing_vars = required_vars - set(operator["params"].keys())
+                    if missing_vars:
+                        raise ValueError(f"Thiếu các biến: {', '.join(missing_vars)}")
 
                     cost = eval(func["formula"], {}, local_env)
                     return cost
+                except NameError as e:
+                    raise RuntimeError(f"Lỗi: Biến hoặc hàm không xác định trong công thức: {e}")
                 except Exception as e:
                     raise RuntimeError(f"Lỗi khi tính toán công thức: {e}")
         raise ValueError(f"Không tìm thấy hàm chi phí cho kiểu {operator['type']}")
