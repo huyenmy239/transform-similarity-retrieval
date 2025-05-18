@@ -54,19 +54,21 @@ class CostFunctionServer:
                 # import re
                 # color = tuple(map(float, re.findall(r"[-+]?\d*\.\d+|\d+", color)))
             except Exception:
-                raise ValueError(f"Không thể chuyển '{color}' thành bộ 3 số RGB")
+                raise ValueError(f"khong the chuyen '{color}'thanh bo 3 RGB")
 
         # Kiểm tra đúng định dạng RGB
         if not isinstance(color, (tuple, list)) or len(color) != 3:
-            raise ValueError(
-                f"Giá trị màu không hợp lệ: {color}, phải là 3 phần tử (r, g, b)"
-            )
+            raise ValueError(f"gia tri mau: {color}, phai la 3 phan tu (r, g, b)")
 
         r, g, b = color
+        # print(f"--- Tính toán giá trị cho phép biến đổi ---")
+        # print(f"--- RGB: {color} ---")
+        # print(f"--- Giá trị: {0.299 * r + 0.587 * g + 0.114 * b} ---")
         return 0.299 * r + 0.587 * g + 0.114 * b
 
     def EvaluateCall(self, operator: dict):
         """Tính chi phí của một phép biến đổi"""
+
         with open(self.path, "r") as f:
             cost_functions = json.load(f)
 
@@ -90,14 +92,12 @@ class CostFunctionServer:
                     required_vars = set(v for v in all_vars if v not in reserved)
                     missing_vars = required_vars - set(operator["params"].keys())
                     if missing_vars:
-                        raise ValueError(f"Thiếu các biến: {', '.join(missing_vars)}")
+                        raise ValueError(f"thieu cac bien: {', '.join(missing_vars)}")
 
                     cost = eval(func["formula"], {}, local_env)
                     return cost
                 except NameError as e:
-                    raise RuntimeError(
-                        f"Lỗi: Biến hoặc hàm không xác định trong công thức: {e}"
-                    )
+                    raise RuntimeError(f"loi: bien hoac ham khong xac dinh: {e}")
                 except Exception as e:
-                    raise RuntimeError(f"Lỗi khi tính toán công thức: {e}")
-        raise ValueError(f"Không tìm thấy hàm chi phí cho kiểu {operator['type']}")
+                    raise RuntimeError(f"loi khi tinh toan cong thuc: {e}")
+        raise ValueError(f"khong tim thay cong thuc cho kieu {operator['type']}")
