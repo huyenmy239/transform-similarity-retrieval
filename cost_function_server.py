@@ -2,6 +2,9 @@ import json
 import math
 import os
 import numpy as np
+import math
+import re
+
 
 
 class CostFunctionServer:
@@ -17,66 +20,52 @@ class CostFunctionServer:
         with open(self.path, "r") as f:
             data = json.load(f)
 
-        # Kiểm tra xem hàm chi phí với cùng 'name' hoặc 'type' đã tồn tại chưa
         for existing_func in data:
-            if (
-                existing_func["name"] == cost_func["name"]
-                or existing_func["type"] == cost_func["type"]
-            ):
-                print(
-                    f"Ham chi phi '{cost_func['name']}' hoac kieu '{cost_func['type']}' da ton tai, khong them lai."
+            if existing_func["name"].lower() == cost_func["name"].lower():
+                raise Exception(
+                    f"Hàm chi phí với tên '{cost_func['name']}' đã tồn tại."
                 )
-                return
+            if existing_func["type"].lower() == cost_func["type"].lower():
+                raise Exception(
+                    f"Hàm chi phí với kiểu '{cost_func['type']}' đã tồn tại."
+                )
 
-        # Nếu chưa tồn tại, thêm mới
         data.append(cost_func)
         with open(self.path, "w") as f:
             json.dump(data, f, indent=4)
-        print(f"Da them hàm chi phi: {cost_func['name']}")
 
     def diff(self, color1: str, color2: str) -> int:
         """Hàm diff: 0 nếu màu giống, 3 nếu khác"""
         return 0 if color1 == color2 else 3
 
-    # def EvaluateCall(self, operator: dict):
-    #     """Tính chi phí của một phép biến đổi"""
-    #     with open(self.path, "r") as f:
-    #         cost_functions = json.load(f)
+    def cbrt(self, x):
+        """Hàm tính căn bậc ba."""
+        return x ** (1 / 3)
 
-    #     for func in cost_functions:
-    #         if func["type"] == operator["type"]:
-    #             try:
-    #                 local_env = dict(operator["params"])
-    #                 local_env["diff"] = self.diff
+    def fourthrt(self, x):
+        """Hàm tính căn bậc bốn."""
+        return x ** (1 / 4)
 
-    #                 cost = eval(func["formula"], {}, local_env)
-    #                 return cost
-    #             except Exception as e:
-    #                 raise RuntimeError(f"Lỗi khi tính toán công thức: {e}")
-    #     raise ValueError(f"Không tìm thấy hàm chi phí cho kiểu {operator['type']}")
-    # def EvaluateCall(self, operator: dict):
-    #     """Tính chi phí của một phép biến đổi"""
-    #     with open(self.path, "r") as f:
-    #         cost_functions = json.load(f)
+    def rgb_to_val(self, color):
+        # Nếu color là chuỗi (ví dụ "(2,0,1)"), chuyển thành tuple
+        if isinstance(color, str):
+            try:
+                # Dùng eval nếu input an toàn, hoặc parse tay
+                color = eval(color)  # Cẩn thận: eval chỉ dùng nếu input đáng tin cậy
+                # Hoặc an toàn hơn (nếu sợ lỗi cú pháp):
+                # import re
+                # color = tuple(map(float, re.findall(r"[-+]?\d*\.\d+|\d+", color)))
+            except Exception:
+                raise ValueError(f"Không thể chuyển '{color}' thành bộ 3 số RGB")
 
-    #     for func in cost_functions:
-    #         if func["type"] == operator["type"]:
-    #             try:
-    #                 local_env = dict(operator["params"])
-    #                 local_env["diff"] = self.diff
-    #                 local_env["np"] = np  # Cho phép dùng np.sum, np.linalg.norm, ...
-    #                 local_env["sqrt"] = math.sqrt
-    #                 cost = eval(func["formula"], {}, local_env)
+        # Kiểm tra đúng định dạng RGB
+        if not isinstance(color, (tuple, list)) or len(color) != 3:
+            raise ValueError(
+                f"Giá trị màu không hợp lệ: {color}, phải là 3 phần tử (r, g, b)"
+            )
 
-    #                 # Nếu kết quả là array, chuyển thành scalar
-    #                 if isinstance(cost, np.ndarray):
-    #                     cost = np.sum(cost)
-
-    #                 return cost
-    #             except Exception as e:
-    #                 raise RuntimeError(f"Lỗi khi tính toán công thức: {e}")
-    #     raise ValueError(f"Không tìm thấy hàm chi phí cho kiểu {operator['type']}")
-
+        r, g, b = color
+        return 0.299 * r + 0.587 * g + 0.114 * b
 
     def EvaluateCall(self, operator: dict):
         """Tính chi phí của một phép biến đổi"""
@@ -88,17 +77,29 @@ class CostFunctionServer:
                 try:
                     local_env = dict(operator["params"])
                     local_env["diff"] = self.diff
-                    local_env["np"] = np
+
                     local_env["sqrt"] = math.sqrt
-                    local_env["abs"] = abs  # cần thiết cho abs(dx) + abs(dy)
+                    local_env["cbrt"] = self.cbrt
+                    local_env["fourthrt"] = self.fourthrt
+                    local_env["sum"] = sum  # Hỗ trợ hàm sum cho toán tử ∑
+                    local_env["rgb_to_val"] = self.rgb_to_val
+
+                    # Kiểm tra các biến cần thiết
+                    all_vars = re.findall(
+                        r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", func["formula"]
+                    )
+                    reserved = {"diff", "sqrt", "cbrt", "fourthrt", "sum", "rgb_to_val"}
+                    required_vars = set(v for v in all_vars if v not in reserved)
+                    missing_vars = required_vars - set(operator["params"].keys())
+                    if missing_vars:
+                        raise ValueError(f"Thiếu các biến: {', '.join(missing_vars)}")
 
                     cost = eval(func["formula"], {}, local_env)
-
-                    # Nếu là array thì lấy tổng scalar
-                    if isinstance(cost, np.ndarray):
-                        cost = np.sum(cost)
-
-                    return float(cost)
+                    return cost
+                except NameError as e:
+                    raise RuntimeError(
+                        f"Lỗi: Biến hoặc hàm không xác định trong công thức: {e}"
+                    )
                 except Exception as e:
                     raise RuntimeError(f"Lỗi khi tính toán công thức: {e}")
         raise ValueError(f"Không tìm thấy hàm chi phí cho kiểu {operator['type']}")
