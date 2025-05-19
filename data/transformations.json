@@ -1,0 +1,115 @@
+{
+    "operators": [
+        {
+            "name": "nonuniform_scale",
+            "parameters": {
+                "scale_x": 1.0,
+                "scale_y": 0.5
+            }
+        },
+        {
+            "name": "scale",
+            "parameters": {
+                "scale": 2.0
+            }
+        },
+        {
+            "name": "scale",
+            "parameters": {
+                "scale": 0.5
+            }
+        },
+        {
+            "name": "scale",
+            "parameters": {
+                "scale": 1.5
+            }
+        },
+        {
+            "name": "nonuniform_scale",
+            "parameters": {
+                "scale_x": 1.0,
+                "scale_y": 2.0
+            }
+        },
+        {
+            "name": "paint",
+            "parameters": {
+                "color": [
+                    0,
+                    255,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "nonuniform_scale",
+            "parameters": {
+                "scale_x": 1.0,
+                "scale_y": 0.25
+            }
+        },
+        {
+            "name": "paint",
+            "parameters": {
+                "color": [
+                    255,
+                    255,
+                    255
+                ]
+            }
+        },
+        {
+            "name": "paint",
+            "parameters": {
+                "color": [
+                    255,
+                    0,
+                    255
+                ]
+            }
+        },
+        {
+            "name": "translate",
+            "parameters": {
+                "dx": 0,
+                "dy": 100
+            }
+        },
+        {
+            "name": "translate",
+            "parameters": {
+                "dx": 100,
+                "dy": 100
+            }
+        },
+        {
+            "name": "translate",
+            "parameters": {
+                "dx": 0,
+                "dy": -100
+            }
+        },
+        {
+            "name": "translate",
+            "parameters": {
+                "dx": 100,
+                "dy": 0
+            }
+        },
+        {
+            "name": "translate",
+            "parameters": {
+                "dx": 50,
+                "dy": 50
+            }
+        },
+        {
+            "name": "nonuniform_scale",
+            "parameters": {
+                "scale_x": 0.5,
+                "scale_y": 1.0
+            }
+        }
+    ]
+}
