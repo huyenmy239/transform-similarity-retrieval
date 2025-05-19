@@ -1,414 +1,198 @@
+import math
 import numpy as np
 from PIL import Image
-from collections import defaultdict
-import math
-from typing import Dict, List, Tuple, Optional, Callable, Any
 from dataclasses import dataclass
-import heapq
+from typing import Callable, Dict, Tuple, Any, List, Optional, get_args, get_origin
+import json
+import os
 
-# --------------------------
-# Core Data Structures
-# --------------------------
+TRANSFORMATION_JSON_FILE = "data/transformations.json"
 
 
 @dataclass
 class TransformationOperator:
-    """Represents a transformation operator that can be applied to images"""
     name: str
-    parameters: Dict[str, type]  # Parameter names and their types
-    apply_function: Callable[[np.ndarray, Dict[str, Any]], np.ndarray]  # Applies transformation to image
+    parameters: Dict[str, type]
+    apply_function: Callable[[Dict[str, Any], Any], Any]  # Apply to an object or coordinate
 
 @dataclass
 class InstantiatedOperator:
-    """An operator with specific parameter values"""
     operator: TransformationOperator
     params: Dict[str, Any]
-    
-    def cost(self) -> float:
-        return self.operator.cost_function(self.params)
-    
-    def apply(self, image: np.ndarray) -> np.ndarray:
-        return self.operator.apply_function(image, self.params)
 
-class TransformationSequence:
-    """Sequence of transformation operations to apply to an image"""
-    def __init__(self):
-        self.operations: List[InstantiatedOperator] = []
-        
-    def add_operation(self, op: InstantiatedOperator):
-        self.operations.append(op)
-        
-    def apply(self, image: np.ndarray) -> np.ndarray:
-        current_image = image.copy()
-        for op in self.operations:
-            current_image = op.apply(current_image)
-        return current_image
-
-# --------------------------
-# Transformation Library Manager
-# --------------------------
+    def apply(self, target):
+        return self.operator.apply_function(self.params, target)
 
 class TransformationLibraryManager:
-    """Manages a library of transformation operators"""
     def __init__(self):
         self.operators: Dict[str, TransformationOperator] = {}
-        
+
     def TLMinsert(self, operator: TransformationOperator):
-        """Add a new transformation operator to the library"""
         if operator.name in self.operators:
             raise ValueError(f"Operator {operator.name} already exists")
         self.operators[operator.name] = operator
-        
+
     def TLMsearch(self, operator_name: str, params: Optional[Dict[str, Any]] = None) -> Optional[InstantiatedOperator]:
-        """Retrieve an operator by name, optionally with parameters"""
         if operator_name not in self.operators:
             return None
-            
+        # Chuyển list thành tuple nếu cần thiết
+
         operator = self.operators[operator_name]
-        if params is not None:
-            # Validate parameters
-            if set(params.keys()) != set(operator.parameters.keys()):
-                raise ValueError("Parameter mismatch")
-            for param, value in params.items():
-                if not isinstance(value, operator.parameters[param]):
-                    raise TypeError(f"Parameter {param} should be {operator.parameters[param]}, got {type(value)}")
-            return InstantiatedOperator(operator, params)
-        return operator
         
+
+        if params is not None:
+            for param, value in params.items():
+                expected_type = operator.parameters[param]
+                if expected_type == Tuple[int, int, int] and isinstance(value, list):
+                    value = tuple(value)
+                    params[param] = value  # Cập nhật lại params
+                origin = get_origin(expected_type)
+
+                if origin is tuple:
+                    if not isinstance(value, tuple):
+                        raise TypeError(f"{param} phải là tuple")
+                    inner_types = get_args(expected_type)
+                    if len(value) != len(inner_types):
+                        raise TypeError(f"{param} phải có {len(inner_types)} phần tử")
+                    for i, (v, t) in enumerate(zip(value, inner_types)):
+                        if not isinstance(v, t):
+                            raise TypeError(f"Phần tử {i} của {param} phải là {t.__name__}")
+                else:
+                    # Tránh isinstance với typing.Generic
+                    if hasattr(expected_type, '__origin__'):
+                        raise TypeError(f"Không hỗ trợ kiểm tra kiểu: {expected_type}")
+                    if not isinstance(value, expected_type):
+                        raise TypeError(f"{param} phải là {expected_type.__name__}, nhưng nhận được {type(value).__name__}")
+
+            return InstantiatedOperator(operator, params)
+
+        return operator
+
     def list_operators(self) -> List[str]:
-        """List all available operator names"""
         return list(self.operators.keys())
 
-# --------------------------
-# Image Processing Utilities
-# --------------------------
+# --- Apply functions ---
+def translate_object(params: Dict[str, Any], obj):
+    obj.x1 += params["dx"]
+    obj.x2 += params["dx"]
+    obj.y1 += params["dy"]
+    obj.y2 += params["dy"]
+    return obj
 
-def load_image(path: str) -> np.ndarray:
-    """Load an image from file into a numpy array"""
-    img = Image.open(path)
-    return np.array(img)
+def scale_object(params: Dict[str, Any], obj):
+    cx = (obj.x1 + obj.x2) / 2
+    cy = (obj.y1 + obj.y2) / 2
+    w = (obj.x2 - obj.x1) * params["scale"] / 2
+    h = (obj.y2 - obj.y1) * params["scale"] / 2
+    obj.x1 = int(cx - w)
+    obj.x2 = int(cx + w)
+    obj.y1 = int(cy - h)
+    obj.y2 = int(cy + h)
+    return obj
 
-def save_image(image: np.ndarray, path: str):
-    """Save a numpy array as an image"""
-    Image.fromarray(image).save(path)
-
-# --------------------------
-# Transformation Operators
-# --------------------------
-
-def create_default_operators() -> List[TransformationOperator]:
-    """Create a set of default transformation operators"""
-    operators = []
+def nonuniform_scaling(params: Dict[str, Any], obj):
+    new_w = (obj.x2 - obj.x1) * params["scale_x"]
+    new_h = (obj.y2 - obj.y1) * params["scale_y"]
     
-    # Translation operator
-    operators.append(TransformationOperator(
-        name="translate",
-        parameters={"dx": int, "dy": int},
-        apply_function=lambda img, params: np.roll(img, (params["dy"], params["dx"]), axis=(0, 1))
-    ))
+    obj.x1 = int(obj.x1)
+    obj.x2 = obj.x1 + int(new_w)
+    obj.y1 = int(obj.y1)
+    obj.y2 = obj.y1 + int(new_h)
     
-    # Rotation operator
-    operators.append(TransformationOperator(
-        name="rotate",
-        parameters={"angle": float},
-        apply_function=lambda img, params: rotate_image(img, params["angle"])
-    ))
+    return obj
+
+def paint(params: Dict[str, Any], obj):
+    color = params.get("color")
+    if not isinstance(color, tuple) or len(color) != 3:
+        raise ValueError("Tham số 'color' phải là tuple gồm 3 phần tử (r, g, b)")
     
-    # Scaling operator
-    operators.append(TransformationOperator(
-        name="scale",
-        parameters={"factor": float},
-        apply_function=lambda img, params: scale_image(img, params["factor"])
-    ))
-    
-    # Color adjustment operator
-    operators.append(TransformationOperator(
-        name="adjust_color",
-        parameters={"channel": int, "delta": int},  # channel: 0=R, 1=G, 2=B
-        apply_function=lambda img, params: adjust_color_channel(img, params["channel"], params["delta"])
-    ))
-    
-    # Paint region operator
-    operators.append(TransformationOperator(
-        name="paint_region",
-        parameters={
-            "x1": int, "y1": int, "x2": int, "y2": int,  # Region coordinates
-            "color": tuple  # (R, G, B)
-        },
-        apply_function=lambda img, params: paint_region(img, params)
-    ))
+    obj.color = color
+    return obj
 
-    # Non-uniform scaling operator
-    operators.append(TransformationOperator(
-        name="nonuniform_scale",
-        parameters={"scale_x": float, "scale_y": float},
-        apply_function=lambda img, params: nonuniform_scale_image(img, params["scale_x"], params["scale_y"])
-    ))
-    
-    return operators
+def move(params: Dict[str, Any], obj):
+    axis = params["axis"].lower()
+    distance = params["distance"]
 
-def rotate_image(img: np.ndarray, angle: float) -> np.ndarray:
-    """Rotate image by specified angle in degrees"""
-    pil_img = Image.fromarray(img)
-    return np.array(pil_img.rotate(angle))
+    if axis == "x":
+        obj.x1 += distance
+        obj.x2 += distance
+    elif axis == "y":
+        obj.y1 += distance
+        obj.y2 += distance
+    else:
+        raise ValueError("Tham số 'axis' phải là 'x' hoặc 'y'.")
 
-def scale_image(img: np.ndarray, factor: float) -> np.ndarray:
-    """Scale image by specified factor"""
-    if factor <= 0:
-        raise ValueError("Scale factor must be positive")
-    h, w = img.shape[:2]
-    pil_img = Image.fromarray(img)
-    return np.array(pil_img.resize((int(w * factor), int(h * factor))))
-
-def adjust_color_channel(img: np.ndarray, channel: int, delta: int) -> np.ndarray:
-    """Adjust a specific color channel by delta value"""
-    if channel < 0 or channel > 2:
-        raise ValueError("Channel must be 0 (R), 1 (G), or 2 (B)")
-    img = img.copy()
-    img[:, :, channel] = np.clip(img[:, :, channel].astype(int) + delta, 0, 255)
-    return img
-
-def paint_region(img: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
-    """Paint a rectangular region with specified color"""
-    x1, y1 = max(0, params["x1"]), max(0, params["y1"])
-    x2, y2 = min(img.shape[1], params["x2"]), min(img.shape[0], params["y2"])
-    img = img.copy()
-    img[y1:y2, x1:x2] = params["color"]
-    return img
-
-def nonuniform_scale_image(img: np.ndarray, scale_x: float, scale_y: float) -> np.ndarray:
-    """Scale image non-uniformly by scale_x and scale_y"""
-    if scale_x <= 0 or scale_y <= 0:
-        raise ValueError("Scale factors must be positive")
-    h, w = img.shape[:2]
-    new_size = (int(w * scale_x), int(h * scale_y))
-    pil_img = Image.fromarray(img)
-    return np.array(pil_img.resize(new_size))
-
-# --------------------------
-# Similarity Search
-# --------------------------
-
-class ImageRetrievalSystem:
-    """Main system for retrieving similar images using transformation-based approach"""
-    def __init__(self, tlm: TransformationLibraryManager):
-        self.tlm = tlm
-        self.images: Dict[str, np.ndarray] = {}  # image_id -> image data
-        self.features: Dict[str, np.ndarray] = {}  # image_id -> feature vector
-        
-    def add_image(self, image_id: str, image: np.ndarray):
-        """Add an image to the database"""
-        self.images[image_id] = image
-        self.features[image_id] = self._extract_features(image)
-        
-    def _extract_features(self, image: np.ndarray) -> np.ndarray:
-        """Extract a simple feature vector from the image"""
-        # In a real system, this would use more sophisticated feature extraction
-        # For simplicity, we'll use average color and image dimensions
-        h, w = image.shape[:2]
-        avg_color = np.mean(image, axis=(0, 1))
-        return np.concatenate([avg_color, [h/1000.0, w/1000.0]])  # Normalized
-    
-    def _generate_candidates(self, img: np.ndarray, 
-                           base_seq: TransformationSequence) -> List[TransformationSequence]:
-        """Generate candidate transformation sequences to explore"""
-        candidates = []
-        h, w = img.shape[:2]
-        
-        # Try translations in different directions
-        for dx, dy in [(10, 0), (-10, 0), (0, 10), (0, -10)]:
-            op = self.tlm.TLMsearch("translate", {"dx": dx, "dy": dy})
-            if op:
-                new_seq = TransformationSequence()
-                new_seq.operations = base_seq.operations.copy()
-                new_seq.add_operation(op)
-                candidates.append(new_seq)
-        
-        # Try small rotations
-        for angle in [-15, -5, 5, 15]:
-            op = self.tlm.TLMsearch("rotate", {"angle": angle})
-            if op:
-                new_seq = TransformationSequence()
-                new_seq.operations = base_seq.operations.copy()
-                new_seq.add_operation(op)
-                candidates.append(new_seq)
-        
-        # Try color adjustments
-        for channel in [0, 1, 2]:  # R, G, B
-            for delta in [-30, -10, 10, 30]:
-                op = self.tlm.TLMsearch("adjust_color", {"channel": channel, "delta": delta})
-                if op:
-                    new_seq = TransformationSequence()
-                    new_seq.operations = base_seq.operations.copy()
-                    new_seq.add_operation(op)
-                    candidates.append(new_seq)
-        
-        return candidates
-
-# --------------------------
-# Main Application
-# --------------------------
-
-def demo_custom_sequence(image_path: str, output_path: str):
-    # Load image
-    image = load_image(image_path)
-    
-    # Initialize TLM and operators
-    tlm = TransformationLibraryManager()
-    for op in create_default_operators():
-        tlm.TLMinsert(op)
-    
-    # Define transformation sequence
-    seq = TransformationSequence()
-
-    # Nonuniform scale (e.g. shrink width, enlarge height)
-    op1 = tlm.TLMsearch("nonuniform_scale", {"scale_x": 0.5, "scale_y": 1.5})
-    seq.add_operation(op1)
-
-    # Paint a region (after scaling)
-    op2 = tlm.TLMsearch("paint_region", {
-        "x1": 50, "y1": 50, "x2": 150, "y2": 150,
-        "color": (255, 0, 0)  # Red
-    })
-    seq.add_operation(op2)
-
-    # Nonuniform scale again (e.g. back to near original)
-    op3 = tlm.TLMsearch("nonuniform_scale", {"scale_x": 2.0, "scale_y": 0.66})
-    seq.add_operation(op3)
-
-    # Apply sequence
-    transformed = seq.apply(image)
-
-    # Save result
-    save_image(transformed, output_path)
+    return obj
 
 
-import tkinter as tk
-from tkinter import filedialog, simpledialog, messagebox
-from PIL import ImageTk, Image
-import json
-import numpy as np
-import os
+# --- Default operators ---
+def create_default_object_operators() -> List[TransformationOperator]:
+    return [
+        TransformationOperator(
+            name="translate",
+            parameters={"dx": int, "dy": int},
+            apply_function=translate_object
+        ),
+        TransformationOperator(
+            name="scale",
+            parameters={"scale": float},
+            apply_function=scale_object
+        ),
+        TransformationOperator(
+            name="nonuniform_scale",
+            parameters={"scale_x": float, "scale_y": float},
+            apply_function=nonuniform_scaling
+        ),
+        TransformationOperator(
+            name="paint",
+            parameters={"color": Tuple[int, int, int]},
+            apply_function=paint
+        ),
+        TransformationOperator(
+            name="move",
+            parameters={"axis": str, "distance": int},
+            apply_function=move
+        ),
+    ]
 
-# ----- Nhúng các class và hàm bạn đã có từ trước -----
-# Giả sử bạn đã định nghĩa các class: TransformationOperator, InstantiatedOperator,
-# TransformationLibraryManager, TransformationSequence, và các hàm như load_image, save_image, create_default_operators, v.v.
+def load_transformations_from_json(filepath=TRANSFORMATION_JSON_FILE):
+    if os.path.exists(filepath):
+        with open(filepath, "r") as f:
+            return json.load(f)
+    return {"operators": []}
 
-# Giao diện người dùng
-class TransformationGUI:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Transformation Manager")
-        
-        self.tlm = TransformationLibraryManager()
-        for op in create_default_operators():
-            self.tlm.TLMinsert(op)
+def save_transformations_to_json(data, filepath=TRANSFORMATION_JSON_FILE):
+    with open(filepath, "w") as f:
+        json.dump(data, f, indent=4)
 
-        self.image = None
-        self.image_path = None
-        self.display_image = None
-        
-        # Giao diện
-        self.setup_widgets()
-        
-    def setup_widgets(self):
-        # Khu vực thêm toán tử mới
-        tk.Label(self.master, text="Nhập toán tử mới (JSON):").pack()
-        self.operator_entry = tk.Text(self.master, height=5)
-        self.operator_entry.pack()
-
-        tk.Button(self.master, text="Thêm toán tử", command=self.add_operator).pack(pady=5)
-        
-        # Khu vực chọn ảnh và áp dụng biến đổi
-        tk.Button(self.master, text="Chọn ảnh", command=self.load_image).pack(pady=5)
-        self.image_label = tk.Label(self.master)
-        self.image_label.pack()
-
-        # Danh sách toán tử có sẵn
-        tk.Label(self.master, text="Chọn toán tử để áp dụng:").pack()
-        self.operator_listbox = tk.Listbox(self.master, selectmode=tk.MULTIPLE, width=50)
-        self.operator_listbox.pack(pady=5)
-        self.refresh_operator_list()
-
-        tk.Button(self.master, text="Áp dụng toán tử", command=self.apply_operators).pack(pady=5)
-
-    def refresh_operator_list(self):
-        self.operator_listbox.delete(0, tk.END)
-        for name in self.tlm.list_operators():
-            self.operator_listbox.insert(tk.END, name)
-
-    def add_operator(self):
-        try:
-            data = json.loads(self.operator_entry.get("1.0", tk.END))
-            name = data["name"]
-            parameters = data["parameters"]
-
-            # Giả sử bạn cho người dùng chọn tên một hàm sẵn có (từ trước)
-            # Ví dụ: bạn cho phép dùng apply_function = "translate"
-            apply_function_name = data["apply_function"]
-            func = globals().get(apply_function_name)
-            if not callable(func):
-                raise ValueError("Không tìm thấy hàm apply_function")
-
-            new_op = TransformationOperator(name=name, parameters=parameters, apply_function=func)
-            self.tlm.TLMinsert(new_op)
-            self.refresh_operator_list()
-            messagebox.showinfo("Thành công", f"Đã thêm toán tử {name}")
-        except Exception as e:
-            messagebox.showerror("Lỗi", f"Lỗi khi thêm toán tử: {e}")
-
-    def load_image(self):
-        filepath = filedialog.askopenfilename()
-        if not filepath:
-            return
-        self.image_path = filepath
-        img = load_image(filepath)
-        self.image = img
-        self.show_image(img)
-
-    def show_image(self, img_np):
-        img = Image.fromarray(img_np.astype(np.uint8))
-        img.thumbnail((300, 300))
-        self.display_image = ImageTk.PhotoImage(img)
-        self.image_label.config(image=self.display_image)
-
-    def apply_operators(self):
-        if self.image is None:
-            messagebox.showwarning("Chưa có ảnh", "Vui lòng chọn ảnh trước")
-            return
-
-        seq = TransformationSequence()
-        selected = self.operator_listbox.curselection()
-
-        try:
-            for idx in selected:
-                op_name = self.operator_listbox.get(idx)
-                operator = self.tlm.TLMsearch(op_name)
-                if isinstance(operator, TransformationOperator):
-                    param_values = {}
-                    for param, ptype in operator.parameters.items():
-                        raw_val = simpledialog.askstring("Nhập tham số", f"{op_name} - {param} ({ptype.__name__}):")
-                        if ptype == tuple:
-                            val = tuple(map(int, raw_val.strip("()").split(",")))
-                        else:
-                            val = ptype(raw_val)
-                        param_values[param] = val
-
-                    inst = self.tlm.TLMsearch(op_name, param_values)
-                    seq.add_operation(inst)
-
-            transformed = seq.apply(self.image)
-            self.show_image(transformed)
-
-            # Lưu kết quả tạm thời
-            save_image(transformed, "output_transformed.jpg")
-            messagebox.showinfo("Hoàn tất", "Đã áp dụng và lưu ảnh kết quả tại output_transformed.jpg")
-        except Exception as e:
-            messagebox.showerror("Lỗi khi áp dụng", str(e))
+def normalize_params(params):
+    """Chuyển tất cả tuple trong params thành list để so sánh/lưu với JSON"""
+    normalized = {}
+    for key, val in params.items():
+        if isinstance(val, tuple):
+            normalized[key] = list(val)
+        else:
+            normalized[key] = val
+    return normalized
 
 
-# ---- Khởi động ứng dụng ----
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = TransformationGUI(root)
-    root.mainloop()
+def find_existing_operator(data, name, params):
+    norm_params = normalize_params(params)
+    for entry in data["operators"]:
+        if entry["name"] == name and entry["parameters"] == norm_params:
+            return entry
+    return None
+
+
+def add_operator_to_json(name, params, filepath=TRANSFORMATION_JSON_FILE):
+    data = load_transformations_from_json(filepath)
+    norm_params = normalize_params(params)
+
+    if not find_existing_operator(data, name, norm_params):
+        data["operators"].append({
+            "name": name,
+            "parameters": norm_params
+        })
+        save_transformations_to_json(data, filepath)
+        return "Thêm tham số mới thành công."
+    return "Tham số đã có trong thư viện."

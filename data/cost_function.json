@@ -2,22 +2,22 @@
     {
         "name": "translate_cost",
         "type": "translate",
-        "formula": "abs(dx) + abs(dy)"
+        "formula": "(abs(dx) + abs(dy)) / 100"
     },
     {
         "name": "scale_cost",
         "type": "scale",
-        "formula": "abs(scale - 1.0) * 10"
+        "formula": "abs(scale - 1.0)"
     },
     {
         "name": "nonuniform_scaling_cost",
-        "type": "nonuniform_scaling",
+        "type": "nonuniform_scale",
         "formula": "(sx - sqrt(sx * sy))**2 + (sy - sqrt(sx * sy))**2"
     },
     {
         "name": "paint_cost",
         "type": "paint",
-        "formula": "(diff(color1, color2)) ** 3 + (rgb_to_val(val1) - rgb_to_val(val2)) ** 2"
+        "formula": "diff(color1, color2) + area / 10000"
     },
     {
         "name": "Test",

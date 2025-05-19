@@ -1,19 +1,16 @@
-# object_manager.py
 from dataclasses import dataclass
 from typing import Tuple, List, Dict
 import pickle
 import os
 
-
 @dataclass
 class ImageObjectRegion:
-    # obj_id: str
+    obj_id: str
     x1: int
     y1: int
     x2: int
     y2: int
     color: Tuple[int, int, int]
-
 
 @dataclass
 class ImageMeta:
@@ -24,7 +21,6 @@ class ImageMeta:
 
     def add_object(self, obj: ImageObjectRegion):
         self.objects.append(obj)
-
 
 class ImageDatabase:
     def __init__(self):
@@ -43,17 +39,14 @@ class ImageDatabase:
         if name in self.images:
             del self.images[name]
 
-
 # --- Lưu và tải ---
 def save_database(db: ImageDatabase, filename="image_database.pkl"):
     with open(filename, "wb") as f:
         pickle.dump(db, f)
 
-
 def load_database(filename="image_database.pkl") -> ImageDatabase:
     with open(filename, "rb") as f:
         return pickle.load(f)
-
 
 def load_or_create_database(filename="image_database.pkl") -> ImageDatabase:
     return load_database(filename) if os.path.exists(filename) else ImageDatabase()
