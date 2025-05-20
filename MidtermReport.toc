@@ -1,0 +1,15 @@
+\babel@toc {vietnamese}{}\relax 
+\contentsline {section}{\numberline {1}Giới thiệu}{3}{section.1}%
+\contentsline {section}{\numberline {2}Cấu trúc chương trình}{3}{section.2}%
+\contentsline {section}{\numberline {3}Yêu cầu cài đặt}{4}{section.3}%
+\contentsline {section}{\numberline {4}Hướng dẫn chạy chương trình}{4}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Chạy giao diện chính (\texttt {main.py})}{4}{subsection.4.1}%
+\contentsline {section}{\numberline {5}Ví dụ minh họa sử dụng chương trình}{10}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Tạo ảnh mới}{10}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Thêm đối tượng}{11}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Áp dụng biến đổi}{12}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Thêm Hàm Chi Phí}{13}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Tính Chi Phí}{14}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Tạo chuỗi biến đổi}{14}{subsection.5.6}%
+\contentsline {section}{\numberline {6}Tổng kết}{15}{section.6}%
+\contentsline {section}{\numberline {7}Tài liệu tham khảo}{15}{section.7}%

@@ -33,5 +33,10 @@
         "name": "Test1",
         "type": "scroll",
         "formula": "89*a+3*b"
+    },
+    {
+        "name": "test_func",
+        "type": "test_func",
+        "formula": "3*a+b**2"
     }
 ]
