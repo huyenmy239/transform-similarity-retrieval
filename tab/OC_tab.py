@@ -1,3 +1,4 @@
+import copy
 import tkinter as tk
 from tkinter import ttk, messagebox
 from object_manager import ImageDatabase
@@ -30,7 +31,7 @@ class TabOC:
         self.image2_box['values'] = self.db.list_images()
         self.image2_box.pack(pady=5)
 
-        self.result_text = tk.Text(frame, height=10, width=40, font=("Helvetica", 9), bg="#ecf0f1")
+        self.result_text = tk.Text(frame, height=20, width=60, font=("Helvetica", 9), bg="#ecf0f1")
         self.result_text.pack(pady=10)
 
         self.image1_box.bind("<<ComboboxSelected>>", self.update_image2_options)
@@ -68,6 +69,8 @@ class TabOC:
 
         converter = ObjectConvertor(self.tlm, CostFunctionServer(), transformations_file="data/transformations.json")
         objects_info = []
+        total_image_cost = 0.0
+
         for i in range(len(img1.objects)):
             obj1 = img1.objects[i]
             obj2 = img2.objects[i]
@@ -75,10 +78,40 @@ class TabOC:
             if result is None:
                 objects_info.append(f"Object {i+1} ({obj1.obj_id} -> {obj2.obj_id}):\n  Không tìm được chuỗi biến đổi phù hợp.")
             elif result == []:
-                objects_info.append(f"Object {i+1} ({obj1.obj_id} -> {obj2.obj_id}):\n  Không cần biến đổi.")
+                objects_info.append(f"Object {i+1} ({obj1.obj_id} -> {obj2.obj_id}):\n  Không cần biến đổi.\n  Tổng chi phí: 0.0")
             else:
-                steps = "\n".join(f"  {step.operator.name} {step.params}" for step in result)
-                objects_info.append(f"Object {i+1} ({obj1.obj_id} -> {obj2.obj_id}):\n{steps}")
+                steps = []
+                total_cost = 0.0
+                current_obj = copy.deepcopy(obj1)
+                for step in result:
+                    operator_data = {
+                        "type": step.operator.name,
+                        "params": {
+                            **step.params,
+                            "color1": getattr(current_obj, "color", (0, 0, 0)),
+                            "color2": getattr(step.apply(copy.deepcopy(current_obj)), "color", (0, 0, 0)),
+                            "val1": getattr(current_obj, "color", (0, 0, 0)),
+                            "val2": getattr(step.apply(copy.deepcopy(current_obj)), "color", (0, 0, 0)),
+                            "dx": step.params.get("dx", 0),
+                            "dy": step.params.get("dy", 0),
+                            "scale": step.params.get("scale", 1.0),
+                            "sx": step.params.get("scale_x", 1.0),
+                            "sy": step.params.get("scale_y", 1.0),
+                            "angle": step.params.get("angle", 0),
+                            "a": step.params.get("a", 0),
+                            "b": step.params.get("b", 0),
+                            "area": (current_obj.x2 - current_obj.x1) * (current_obj.y2 - current_obj.y1),
+                        }
+                    }
+                    cost = converter.cost_function_server.EvaluateCall(operator_data)
+                    total_cost += cost
+                    steps.append(f"  {step.operator.name} {step.params}")
+                    current_obj = step.apply(current_obj)
+                total_image_cost += total_cost
+                steps_str = "\n".join(steps)
+                objects_info.append(f"Object {i+1} ({obj1.obj_id} -> {obj2.obj_id}):\n{steps_str}\n  Tổng chi phí: {total_cost:.2f}")
+
+        objects_info.append(f"\nTổng chi phí của tất cả các object: {total_image_cost:.2f}")
 
         self.result_text.delete(1.0, tk.END)
         self.result_text.insert(tk.END, "\n".join(objects_info))
