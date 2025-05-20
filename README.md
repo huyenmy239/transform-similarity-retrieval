@@ -6,7 +6,7 @@
 | 1   | Trần Huỳnh Trung Hiếu   | N21DCCN122  | Phát triển file `cost_function_server.py`, thực hiện chỉnh sửa giao diện người dùng và viết tài liệu hướng dẫn sử dụng phần mềm. |
 | 2   | Nguyễn Thị Thanh Huyến  | N21DCCN130  | Phát triển file `object_manager.py`, `transformation_manager.py` và viết file README.         |
 | 3   | Nguyễn Thị Huyền My     | N21DCCN147  | Phát triển file `object_manager.py`, `transformation_manager.py` và `object_converter`.py. |
-| 4   | Tô Phan Kiều Thương     | N21DCCN184  | Phát triển file `cost_function_server.py`, tối ưu giao diện người dùng và chỉnh sửa tài liệu.     |
+| 4   | Tô Phan Kiều Thương     | N21DCCN184  | Phát triển file `cost_function_server.py` và chỉnh sửa tài liệu.     |
 
 
 ## 📘 Thông tin đề bài
@@ -60,8 +60,6 @@ Các chức năng cụ thể:
     - Biến đổi ảnh 1 thành ảnh 2, cho người dùng chọn ảnh và xem các bước biến đổi (với cost bé nhất).
     - Cho phép người dùng chỉnh sửa các object của ảnh trong một lần áp dụng. Cụ thể, người dùng sẽ được chọn nhiều phép biến đổi trên nhiều object, có thể sắp xếp thứ tự các phép biến đổi, xem chương trình biến đổi object theo trình tự từng bước mà người dùng đã sắp xếp.
 
-## ▶️ Hướng dẫn chạy chương trình
-✅ Đầu tiên chúng ta đến với phần Cài đặt:
 ## ⚙️ Hướng dẫn cài đặt
 Yêu cầu:
 - Python >= 3.8
@@ -70,11 +68,102 @@ Yêu cầu:
 ```bash
 pip install -r requirements.txt
 ```
-✅ Tiếp đến, vào file `main.py` và thực thi
+✅ Tiếp đến, tiến hành thực thi
 ```bash
 python main.py
 ```
 Chương trình sẽ chạy và hiện ra giao diện sau:
-![Giao diện hiển thị sau khi run main.py](image.png) 
+![Giao diện hiển thị sau khi run main.py](images/image.png) 
 
 ✅ Sau khi chương trình được chạy, người dùng lúc này có thể tương tác tùy ý trên giao diện.
+
+## ▶️ Hướng dẫn chạy chương trình
+
+Giao diện chính sẽ hiện ra với 6 tab:
+
+- **Home**
+- **Transformation Library Manager**
+- **Cost Function Server**
+- **Object Convertor**
+- **Sequence Editor**
+- **About**
+
+---
+
+### 1. Home: Quản lý danh sách ảnh và chỉnh sửa object
+
+1. **Chọn ảnh** từ Combobox “Chọn ảnh” để xem trước trên canvas.
+2. Nhấn **“Thêm ảnh mới”**, nhập tên và tọa độ ảnh (ví dụ: `anh1, 0, 0, 100, 100`), nhấn **“Tạo ảnh”**.
+3. Nhấn **“Chỉnh sửa object”**, thêm/xóa object, chỉnh sửa tọa độ (ví dụ: `x1, y1, x2, y2`) và màu RGB (ví dụ: `(255,0,0)`), nhấn **“Lưu”**.
+
+![Giao diện Home](images/home.png)
+
+---
+
+### 2. Transformation Library Manager (TLM): Áp dụng phép biến đổi lên object
+
+1. **Chọn ảnh** từ Combobox “Chọn ảnh” để hiển thị trên canvas.
+2. **Chọn object** từ Combobox “Chọn object”.
+3. **Chọn toán tử** (ví dụ: `translate`, `scale`) từ Combobox “Chọn toán tử”, nhấn **“Tiếp tục”**.
+4. Trong cửa sổ tùy chọn, chọn:
+   - **“Chọn từ file JSON”**: Chọn tham số từ `transformations.json` (ví dụ: `{"dx": 10, "dy": 20}`), nhấn **“Áp dụng”**.
+   - **“Nhập tham số thủ công”**: Nhập tham số (ví dụ: `dx=10, dy=20`), nhấn **“Áp dụng”**.
+5. Kiểm tra canvas để xem đối tượng sau khi biến đổi.
+
+![Giao diện tab Transformation Library Manager](images/TLM.png)
+
+---
+
+### 3. Cost Function Server (CFS): Quản lý và tính toán hàm chi phí
+
+1. Xem danh sách **hàm chi phí** trong Listbox.
+2. Nhấn **“Thêm Hàm Chi Phí”**, nhập tên (ví dụ: `translate_cost`), loại phép biến đổi (`translate`), công thức (ví dụ: `dx + dy`), sử dụng máy tính công thức, nhấn **“Xác Nhận”**.
+3. Nhấn **“Tính Chi Phí”**, chọn hàm chi phí, nhập tham số (ví dụ: `dx=10, dy=20`), nhấn **“Tính”** để xem kết quả trong messagebox.
+
+![Giao diện tab Cost Function Server](images/CFS.png)
+
+---
+
+### 4. Object Convertor (OC): Chuyển đổi object giữa hai ảnh
+
+1. **Chọn hai ảnh** từ Combobox “Chọn ảnh 1” và “Chọn ảnh 2” (ảnh 2 không trùng ảnh 1).
+2. Nhấn **“Chạy Convertor”** để xem chuỗi biến đổi và chi phí trong **Text widget**.
+3. Kiểm tra kết quả: chuỗi biến đổi cho từng object (ví dụ: `translate {"dx": 10, "dy": 20}`) và tổng chi phí.
+
+![Giao diện tab Object Convertor](images/OC.png)
+
+---
+
+### 5. Sequence Editor: Tạo và áp dụng chuỗi biến đổi
+
+1. **Chọn ảnh** từ Combobox “Chọn ảnh” để hiển thị trên canvas.
+2. **Chọn object** từ Combobox “Chọn object”.
+3. **Chọn toán tử và tham số** (ví dụ: `translate, {"dx": 10, "dy": 20}`) từ Combobox, nhấn **“Thêm phép biến đổi”** để thêm vào **Listbox tạm thời**.
+4. Nhấn **“Thêm vào chuỗi”** để thêm vào **Listbox chuỗi chính**.
+5. Sắp xếp chuỗi bằng nút **“Lên”/“Xuống”** hoặc xóa bằng **“Xóa chuỗi”**.
+6. Nhấn **“Áp dụng”** để chạy chuỗi và xem kết quả trong **Text widget** (giai đoạn, chi phí, lỗi nếu có).
+
+![Giao diện tab Sequence Editor](images/SE.png)
+
+---
+
+### 6. About: Thông tin về chương trình
+Các thông tin về chương trình và tác giả.
+
+
+## 🗒️ Demo
+
+### Câu d. Demo chương trình bằng cách thực hiện phép biến đổi lên ảnh 1.
+
+#### Các bước thực hiện:
+
+1. **Thêm các phép biến đổi**:
+   - **nonuniform_scale**: `{'scale_x': 1.0, 'scale_y': 0.5}` cho **object 1**.
+   - **paint**: `{'color': [255, 0, 255]}` cho **object 3**.
+   - **nonuniform_scale**: `{'scale_x': 1.0, 'scale_y': 2.0}` cho **object 3**.
+
+   ![Các thông số đầu vào](images/input.png)
+
+2. **Bấm "Áp dụng"**. Ảnh 1 sẽ được thực hiện 3 phép biến đổi và trả về kết quả cuối cùng.
+
+   ![Kết quả đầu ra](images/output.png)
