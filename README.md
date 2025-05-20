@@ -1,12 +1,12 @@
 # 💻 Project: Object Image Editor
 
 ## 👨‍🎓 Thông tin sinh viên thực hiện
-| STT | Họ và Tên               | MSSV        |
-|-----|--------------------------|-------------|
-| 1   | Trần Huỳnh Trung Hiếu    | N21DCCN122  |
-| 2   | Nguyễn Thị Thanh Huyến   | N21DCCN130  |
-| 3   | Nguyễn Thị Huyền My      | N21DCCN147  |
-| 4   | Tô Phan Kiều Thương      | N21DCCN184  |
+| STT | Họ và Tên               | MSSV        | Tính năng thực hiện                                                               |
+|-----|-------------------------|-------------|-------------------------------------------------------------------------------------|
+| 1   | Trần Huỳnh Trung Hiếu   | N21DCCN122  | Phát triển file `cost_function_server.py`, thực hiện chỉnh sửa giao diện người dùng và viết tài liệu hướng dẫn sử dụng phần mềm. |
+| 2   | Nguyễn Thị Thanh Huyến  | N21DCCN130  | Phát triển file `object_manager.py`, `transformation_manager.py` và viết file README.         |
+| 3   | Nguyễn Thị Huyền My     | N21DCCN147  | Phát triển file `object_manager.py`, `transformation_manager.py` và `object_converter`.py. |
+| 4   | Tô Phan Kiều Thương     | N21DCCN184  | Phát triển file `cost_function_server.py`, tối ưu giao diện người dùng và chỉnh sửa tài liệu.     |
 
 
 ## 📘 Thông tin đề bài
@@ -25,7 +25,7 @@ Chương trình được xây dựng bằng ngôn ngữ **Python**, là một �
 Chương trình bao gồm các phần sau:
 - `main.py` - File chính để chạy chương trình.
 - `data/` - Thư mục chứa các file json lưu trữ các phép biến đổi và công thức tính chi phí.
-- `tab/` - Thư mục chứa các tab giao diện của ứng dụng như Home, CFS, OC, Senquence, TML, About.
+- `tab/` - Thư mục chứa các tab giao diện của ứng dụng như Home, Cost Function Server, Object Converter, Senquence, Transformation Library Manager, About.
 - `test/` - Thư mục chứa các file test trong quá trình làm ứng dụng.
 - `cost_function_server.py` - Quản lý và tính toán các hàm chi phí dựa trên công thức lưu trữ trong JSON. Hỗ trợ thêm công thức mới, tính chi phí cho các phép biến đổi, và xử lý dữ liệu màu RGB.
     - Chi tiết:
@@ -52,7 +52,6 @@ Chương trình bao gồm các phần sau:
 
 - `object_manager.py` - Quản lý dữ liệu hình ảnh và các đối tượng trong ảnh (vị trí, màu sắc). Cung cấp các lớp biểu diễn đối tượng (ImageObjectRegion) và siêu dữ liệu ảnh (ImageMeta). Hỗ trợ thêm, lấy, xóa ảnh trong cơ sở dữ liệu (ImageDatabase) và lưu/tải cơ sở dữ liệu bằng định dạng nhị phân (pickle).
 - `object_converter.py` - Thực hiện chuyển đổi giữa hai đối tượng hình ảnh (ImageObjectRegion) bằng cách tìm chuỗi các phép biến đổi tối ưu dựa trên thư viện phép biến đổi và hàm chi phí. Sử dụng thuật toán tìm kiếm có ưu tiên (A*) để xác định dãy phép biến đổi phù hợp, đồng thời hỗ trợ tải cấu hình phép biến đổi từ file JSON và đánh giá chi phí từng bước chuyển đổi.
-- `gui.py` - Xử lý giao diện người dùng, hiển thị thông tin và tương tác với người dùng qua các thành phần GUI như nút bấm, bảng dữ liệu và biểu đồ. Hỗ trợ cập nhật dữ liệu thời gian thực và phản hồi các sự kiện từ người dùng.
 
 Các chức năng cụ thể:
     - Cho phép người dùng xem ảnh, chỉnh sửa các thông số của object trong ảnh, thêm ảnh mới.
@@ -71,7 +70,11 @@ Yêu cầu:
 ```bash
 pip install -r requirements.txt
 ```
-✅ Tiếp đến, vào file `main.py` và Run code thì chương trình sẽ chạy và hiện ra giao diện sau:
+✅ Tiếp đến, vào file `main.py` và thực thi
+```bash
+python main.py
+```
+Chương trình sẽ chạy và hiện ra giao diện sau:
 ![Giao diện hiển thị sau khi run main.py](image.png) 
 
 ✅ Sau khi chương trình được chạy, người dùng lúc này có thể tương tác tùy ý trên giao diện.
