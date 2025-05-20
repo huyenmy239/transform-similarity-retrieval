@@ -28,5 +28,10 @@
         "name": "rotate_cost",
         "type": "rotate",
         "formula": "(angle / 180) ** 2"
+    },
+    {
+        "name": "Test1",
+        "type": "scroll",
+        "formula": "89*a+3*b"
     }
 ]

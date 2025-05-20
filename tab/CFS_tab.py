@@ -4,7 +4,6 @@ import tkinter as tk
 import json
 import re
 from cost_function_server import CostFunctionServer
-import math
 
 class TabCFS:
     def __init__(self, parent):
@@ -26,14 +25,22 @@ class TabCFS:
 
         ttk.Label(self.main_frame, text="📄 Danh Sách Hàm Chi Phí", font=("Arial", 12, "bold")).pack(anchor="w", pady=10)
 
-        scrollbar = ttk.Scrollbar(self.main_frame)
-        scrollbar.pack(side="right", fill="y")
+        # Thanh cuộn dọc
+        scrollbar_y = ttk.Scrollbar(self.main_frame)
+        scrollbar_y.pack(side="right", fill="y")
 
+        # Thanh cuộn ngang
+        scrollbar_x = ttk.Scrollbar(self.main_frame, orient="horizontal")
+        scrollbar_x.pack(side="bottom", fill="x")
+
+        # Listbox với cả thanh cuộn dọc và ngang
         self.listbox = tk.Listbox(
-            self.main_frame, width=80, height=15, font=("Arial", 10), yscrollcommand=scrollbar.set
+            self.main_frame, width=80, height=15, font=("Arial", 10),
+            yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set
         )
         self.listbox.pack(pady=5, fill="both", expand=True)
-        scrollbar.config(command=self.listbox.yview)
+        scrollbar_y.config(command=self.listbox.yview)
+        scrollbar_x.config(command=self.listbox.xview)
 
         self.refresh_cost_functions()
 
@@ -101,10 +108,10 @@ class TabCFS:
         calc_frame.pack(fill="both", pady=10)
 
         buttons = [
-            ("7", 0, 0), ("8", 0, 1), ("9", 0, 2), ("/", 0, 3), ("diff(", 0, 4), ("∑", 0, 5),
+            ("7", 0, 0), ("8", 0, 1), ("9", 0, 2), ("/", 0, 3), ("p(", 0, 4), ("∑", 0, 5),
             ("4", 1, 0), ("5", 1, 1), ("6", 1, 2), ("*", 1, 3), (")", 1, 4), ("x", 1, 5),
-            ("1", 2, 0), ("2", 2, 1), ("3", 2, 2), ("-", 2, 3), ("color1", 2, 4), ("y", 2, 5),
-            ("0", 3, 0), (".", 3, 1), ("+", 3, 2), ("^", 3, 3), ("color2", 3, 4), ("z", 3, 5),
+            ("1", 2, 0), ("2", 2, 1), ("3", 2, 2), ("-", 2, 3), ("q", 2, 4), ("y", 2, 5),
+            ("0", 3, 0), (".", 3, 1), ("+", 3, 2), ("^", 3, 3), ("k", 3, 4), ("z", 3, 5),
             ("√", 4, 0), ("∛", 4, 1), ("∜", 4, 2), ("²", 4, 3), ("a", 4, 4), ("b", 4, 5),
             ("C", 5, 0), ("⌫", 5, 1), ("(", 5, 2), (")", 5, 3), ("=", 5, 4), (",", 5, 5),
         ]
