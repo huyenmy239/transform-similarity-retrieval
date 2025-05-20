@@ -14,7 +14,7 @@ db = load_or_create_database(db_file)
 # Tạo cửa sổ chính
 root = tk.Tk()
 root.title("Object Image Editor")
-root.geometry("1000x500")
+root.geometry("1200x750")
 root.configure(bg="#f0f4f8")
 
 # Tùy chỉnh giao diện với ttk.Style
